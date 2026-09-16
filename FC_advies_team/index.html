@@ -316,7 +316,7 @@ function connect(){
   sessionId="s_"+Math.random().toString(36).substr(2,10);
   connected=true;updateUI();
   const w=document.getElementById("welcome");if(w)w.style.display="none";
-  addMsg("jacky","Welkom, ik ben Jacky, de regisseur van het FC advies team. Stel je vraag over de onderneming of over privé- en familievermogen, of upload een document (pdf, docx, xlsx) dat ik moet controleren.");
+  addMsg("jacky","Welkom, ik ben Jacky, de regisseur van het Family Office & Finance-Compliance advies team. Stel je vraag over de onderneming of over privé- en familievermogen, of upload een document (pdf, docx, xlsx) dat ik moet controleren.");
 }
 function disconnect(){connected=false;sessionId=null;updateUI()}
 function updateUI(){
