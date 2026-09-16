@@ -12,7 +12,7 @@
 
   @keyframes typingPulse{0%,80%,100%{opacity:.3}40%{opacity:1}}
   @keyframes msgAppear{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-  .typing-dot{animation:typingPulse 1.2s ease-in-out infinite;font-size:10px;color:#8B8FA3}
+  .typing-dot{animation:typingPulse 1.2s ease-in-oFut infinite;font-size:10px;color:#8B8FA3}
   .msg-appear{animation:msgAppear .3s ease-out}
   ::-webkit-scrollbar{width:6px}
   ::-webkit-scrollbar-thumb{background:#D1D2D3;border-radius:3px}
@@ -339,7 +339,7 @@ async function sendMessage(){
   try{
     const url=document.getElementById("webhook-url").value.trim();
     const controller=new AbortController();
-    const timeout=setTimeout(()=>controller.abort(),120000);
+    const timeout=setTimeout(()=>controller.abort(),480000);
     let res;
     if(doc){
       const form=new FormData();
