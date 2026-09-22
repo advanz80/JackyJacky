@@ -12,7 +12,7 @@
 
   @keyframes typingPulse{0%,80%,100%{opacity:.3}40%{opacity:1}}
   @keyframes msgAppear{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-  .typing-dot{animation:typingPulse 1.2s ease-in-oFut infinite;font-size:10px;color:#8B8FA3}
+  .typing-dot{animation:typingPulse 1.2s ease-in-out infinite;font-size:10px;color:#8B8FA3}
   .msg-appear{animation:msgAppear .3s ease-out}
   ::-webkit-scrollbar{width:6px}
   ::-webkit-scrollbar-thumb{background:#D1D2D3;border-radius:3px}
@@ -239,6 +239,9 @@ let connected=false,sessionId=null,sending=false,avatarPhotos={},uploadingFor=nu
     if(paramUrl)localStorage.setItem("fc_webhook_url",paramUrl);
     setTimeout(()=>connect(),300);
   }
+  // Optionele override van de poll-URL: ?pollUrl=... (anders afgeleid van de webhook-URL)
+  const pollParam=params.get("pollUrl");
+  if(pollParam)localStorage.setItem("fc_poll_url",pollParam);
 })();
 
 function getPhoto(k){return avatarPhotos[k]||AGENTS[k]?.photo||null}
@@ -338,6 +341,8 @@ async function sendMessage(){
   showTyping("jacky");
   try{
     const url=document.getElementById("webhook-url").value.trim();
+    // Live-feed starten: baseline vastleggen (rijen van vorige beurten negeren) en pollen.
+    await startPolling(url);
     const controller=new AbortController();
     const timeout=setTimeout(()=>controller.abort(),480000);
     let res;
@@ -354,19 +359,87 @@ async function sendMessage(){
         body:JSON.stringify({action:"sendMessage",chatInput:text,sessionId}),signal:controller.signal});
     }
     clearTimeout(timeout);
+    // Stoppen met pollen en de laatste tussenstappen ophalen vóór de eindsynthese.
+    stopPolling();await pollOnce();
     removeTyping();
     if(!res.ok)throw new Error(`HTTP ${res.status}: ${res.statusText}`);
     const ct=res.headers.get("content-type")||"";
     if(ct.includes("text/event-stream")||ct.includes("text/plain")){await handleStream(res)}
-    else{const d=await res.json();const out=d.output||d.response||d.text||(Array.isArray(d)?d[0]?.output||d[0]?.response||JSON.stringify(d):JSON.stringify(d));await processOutput(out)}
-  }catch(err){removeTyping();addSystem(`Verbindingsfout: ${err.message}`);console.error(err)}
+    else{const d=await res.json();const out=d.output||d.response||d.text||(Array.isArray(d)?d[0]?.output||d[0]?.response||JSON.stringify(d):JSON.stringify(d));await processFinal(out)}
+  }catch(err){stopPolling();removeTyping();addSystem(err.name==="AbortError"?"Het team heeft langer nodig dan verwacht — probeer het opnieuw.":`Verbindingsfout: ${err.message}`);console.error(err)}
+  stopPolling();
   sending=false;clearFile();document.getElementById("send-btn").disabled=false;document.getElementById("chat-input").focus();
 }
 
 async function handleStream(res){
   const reader=res.body.getReader(),dec=new TextDecoder();let buf="",full="";
   while(true){const{done,value}=await reader.read();if(done)break;buf+=dec.decode(value,{stream:true});const lines=buf.split("\n");buf=lines.pop()||"";for(const ln of lines){if(ln.startsWith("data: ")){const d=ln.slice(6);if(d==="[DONE]")continue;try{const p=JSON.parse(d);full+=p.token||p.text||p.chunk||""}catch{full+=d}}else if(ln.trim()&&!ln.startsWith(":"))full+=ln}}
-  removeTyping();if(full.trim())processOutput(full.trim());
+  removeTyping();if(full.trim())processFinal(full.trim());
+}
+
+// ═══ LIVE FEED (kladblok polling) ═══
+// De specialisten schrijven hun bijdrage tijdens de beurt weg in fc_kladblok.
+// We pollen die tabel en tonen elke nieuwe rij live. Cursor = row-id (via de poll-feed).
+let pollTimer=null, pollActive=false, renderedId=0, pollPrevAgent=null, pollMainUrl=null;
+
+function pollFeedUrl(mainUrl){
+  const override=localStorage.getItem("fc_poll_url");
+  if(override)return override;
+  // Zelfde n8n-instance, ander pad: .../webhook/fc-poll
+  const m=String(mainUrl||"").match(/^(https?:\/\/[^\/]+)\/webhook\//i);
+  if(m)return m[1]+"/webhook/fc-poll";
+  return String(mainUrl||"").replace(/\/[^\/]*$/,"/fc-poll");
+}
+
+async function fetchFeed(mainUrl){
+  try{
+    const res=await fetch(pollFeedUrl(mainUrl)+"?sessionId="+encodeURIComponent(sessionId));
+    if(!res.ok)return[];
+    const d=await res.json();
+    return Array.isArray(d)?d:(d.messages||[]);
+  }catch(e){return[]}
+}
+
+function renderFeed(entries){
+  const fresh=entries.filter(e=>typeof e.id==="number"&&e.id>renderedId).sort((a,b)=>a.id-b.id);
+  if(!fresh.length)return;
+  removeTyping();
+  for(const e of fresh){
+    const agentKey=resolveAgent(e.agent)||"jacky";
+    const toKey=resolveAgent(e.to);
+    const t=e.text||"";
+    if(!t.trim()){renderedId=e.id;continue}
+    if(toKey){
+      if(pollPrevAgent&&pollPrevAgent!==agentKey)addHandoff(pollPrevAgent,agentKey);
+      addDirectedMsg(agentKey,toKey,t);
+    }else if(agentKey==="jacky"){
+      addMsg("jacky",t);
+    }else{
+      if(pollPrevAgent&&pollPrevAgent!==agentKey)addHandoff(pollPrevAgent,agentKey);
+      addAgentReply(agentKey,t);
+    }
+    renderedId=e.id;pollPrevAgent=agentKey;
+  }
+}
+
+async function pollOnce(){
+  const entries=await fetchFeed(pollMainUrl);
+  renderFeed(entries);
+  if(pollActive)showTyping("jacky"); // team is nog aan het werk
+}
+
+async function startPolling(mainUrl){
+  pollMainUrl=mainUrl;pollPrevAgent=null;
+  // Baseline: rijen van eerdere beurten van deze sessie niet opnieuw tonen.
+  const base=await fetchFeed(mainUrl);
+  renderedId=base.reduce((m,e)=>Math.max(m,(typeof e.id==="number"?e.id:0)),0);
+  pollActive=true;
+  pollTimer=setInterval(pollOnce,2500);
+}
+
+function stopPolling(){
+  pollActive=false;
+  if(pollTimer){clearInterval(pollTimer);pollTimer=null}
 }
 
 // ═══ OUTPUT PROCESSING — tries JSON first, falls back to text parsing ═══
@@ -377,6 +450,32 @@ async function processOutput(raw){
     return;
   }
   displayTextFallback(raw);
+}
+
+// Eindafhandeling na het pollen: het specialisten-overleg is al live getoond via de
+// kladblok-feed, dus hier renderen we alléén jacky's slotbericht (jacky zonder "to").
+// Zo verschijnt niets dubbel, of de hoofd-response nu jacky-only of de volledige
+// reconstructie teruggeeft.
+async function processFinal(raw){
+  const arr=tryParseJSON(raw);
+  if(arr){
+    const jackyFinals=arr.filter(m=>{
+      const k=resolveAgent(m.agent)||"jacky";
+      return k==="jacky" && !m.to && String(m.text||"").trim();
+    });
+    const last=jackyFinals[jackyFinals.length-1];
+    if(last){
+      if(pollPrevAgent&&pollPrevAgent!=="jacky")addHandoff(pollPrevAgent,"jacky");
+      const mentioned=detectMention(last.text);
+      mentioned?addMention("jacky",mentioned,last.text):addMsg("jacky",last.text);
+    }
+    return;
+  }
+  const t=String(raw??"").trim();
+  if(t){
+    if(pollPrevAgent&&pollPrevAgent!=="jacky")addHandoff(pollPrevAgent,"jacky");
+    addMsg("jacky",t);
+  }
 }
 
 function tryParseJSON(raw){
