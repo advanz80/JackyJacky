@@ -71,7 +71,8 @@
   .attach-btn{padding:10px 12px;border:1px solid #D1D2D3;border-radius:8px;background:#FAFAFA;color:#8B8FA3;font-size:16px;cursor:pointer;line-height:1}
   .attach-btn:hover{background:#F0F0F0}
   .attach-btn:disabled{background:#F0F0F0;color:#ccc;cursor:not-allowed}
-  .file-chip{display:none;align-items:center;gap:6px;background:#F0F2F5;border-radius:14px;padding:5px 10px;font-size:12px;color:#3A3A5C;max-width:160px}
+  .file-chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;max-width:340px;overflow-x:auto}
+  .file-chip{display:inline-flex;align-items:center;gap:6px;background:#F0F2F5;border-radius:14px;padding:5px 10px;font-size:12px;color:#3A3A5C;max-width:160px}
   .file-chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .file-chip button{border:none;background:none;color:#8B8FA3;cursor:pointer;font-size:13px;line-height:1}
   .chat-input{flex:1;padding:10px 14px;border:1px solid #D1D2D3;border-radius:8px;font-size:14px;font-family:inherit;background:#FAFAFA;outline:none;resize:none;min-height:42px;max-height:120px;line-height:1.4}
@@ -192,8 +193,8 @@
     <button class="jump-btn" id="jump-btn" onclick="jumpToLatest()">↓ Nieuwste berichten</button>
     <div class="input-area">
       <div class="input-row">
-        <button class="attach-btn" id="attach-btn" onclick="document.getElementById('doc-upload').click()" disabled title="Document toevoegen (pdf, docx, xlsx)">📎</button>
-        <span class="file-chip" id="file-chip"><span id="file-chip-name"></span><button onclick="clearFile()" title="Verwijderen">✕</button></span>
+        <button class="attach-btn" id="attach-btn" onclick="document.getElementById('doc-upload').click()" disabled title="Documenten toevoegen (pdf, docx, xlsx) — meerdere mogelijk">📎</button>
+        <div class="file-chips" id="file-chips"></div>
         <textarea class="chat-input" id="chat-input" placeholder="Verbind eerst met n8n..." rows="1" disabled onkeydown="handleKey(event)"></textarea>
         <button class="send-btn" id="send-btn" onclick="sendMessage()" disabled>Verstuur</button>
       </div>
@@ -201,7 +202,7 @@
   </div>
 </div>
 <input type="file" class="hidden-upload" id="avatar-upload" accept="image/*" onchange="handleAvatarUpload(event)">
-<input type="file" class="hidden-upload" id="doc-upload" accept=".pdf,.docx,.xlsx,.txt,.csv,.md,.html" onchange="handleDocUpload(event)">
+<input type="file" class="hidden-upload" id="doc-upload" accept=".pdf,.docx,.xlsx,.txt,.csv,.md,.html" multiple onchange="handleDocUpload(event)">
 
 <script>
 // ═══ AGENTS ═══
@@ -224,7 +225,7 @@ function normKey(s){return String(s||"").toLowerCase().replace(/[^a-z0-9]/g,"")}
 function resolveAgent(raw){const k=normKey(raw);return AGENTS[k]?k:null}
 
 // ═══ STATE ═══
-let connected=false,sessionId=null,sending=false,avatarPhotos={},uploadingFor=null,pendingDoc=null;
+let connected=false,sessionId=null,sending=false,avatarPhotos={},uploadingFor=null,pendingDocs=[];
 
 // ═══ INIT ═══
 (function(){
@@ -296,17 +297,23 @@ function updateAv(k){
 }
 function avHTML(k){const a=AGENTS[k],ph=getPhoto(k);return`<div class="chat-avatar" style="background:${a.gradient}">${ph?`<img src="${ph}" onerror="this.remove()">`:a.initials}</div>`}
 
-// ═══ DOCUMENT UPLOAD (voor de casus, niet voor profielfoto's) ═══
+// ═══ DOCUMENT UPLOAD (voor de casus, niet voor profielfoto's) — meerdere mogelijk ═══
 function handleDocUpload(e){
-  const f=e.target.files[0];if(!f)return;
-  pendingDoc=f;
-  document.getElementById("file-chip-name").textContent=f.name;
-  document.getElementById("file-chip").style.display="inline-flex";
+  const files=Array.from(e.target.files||[]);
+  if(!files.length)return;
+  for(const f of files) pendingDocs.push(f);
+  e.target.value=""; // legen zodat je nog meer (of hetzelfde) kunt toevoegen
+  renderChips();
 }
+function renderChips(){
+  const c=document.getElementById("file-chips");
+  c.innerHTML=pendingDocs.map((f,i)=>`<span class="file-chip"><span>${esc(f.name)}</span><button onclick="removeDoc(${i})" title="Verwijderen">✕</button></span>`).join("");
+}
+function removeDoc(i){ pendingDocs.splice(i,1); document.getElementById("doc-upload").value=""; renderChips(); }
 function clearFile(){
-  pendingDoc=null;
+  pendingDocs=[];
   document.getElementById("doc-upload").value="";
-  document.getElementById("file-chip").style.display="none";
+  renderChips();
 }
 
 // ═══ URL ═══
@@ -339,10 +346,10 @@ function handleKey(e){if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendMe
 
 async function sendMessage(){
   const inp=document.getElementById("chat-input"),text=inp.value.trim();
-  if((!text&&!pendingDoc)||!connected||sending)return;
+  if((!text&&!pendingDocs.length)||!connected||sending)return;
   sending=true;inp.value="";inp.style.height="auto";document.getElementById("send-btn").disabled=true;
-  const doc=pendingDoc;
-  addUser(text||`[document: ${doc?.name}]`);
+  const docs=pendingDocs.slice();
+  addUser(text||`[documenten: ${docs.map(d=>d.name).join(", ")}]`);
   showTyping("jacky");
   try{
     const url=document.getElementById("webhook-url").value.trim();
@@ -351,13 +358,14 @@ async function sendMessage(){
     const controller=new AbortController();
     const timeout=setTimeout(()=>controller.abort(),480000);
     let res;
-    if(doc){
+    if(docs.length){
       const form=new FormData();
       form.append("action","sendMessage");
       form.append("chatInput",text);
       form.append("sessionId",sessionId);
-      // "data" is het binaire veld dat de n8n Chat Trigger verwacht bij bestandsuploads.
-      form.append("data",doc,doc.name);
+      // Elk bestand als eigen binair veld (data0, data1, ...) zodat n8n er losse
+      // binaries van maakt die 'Bestanden uitsplitsen' allemaal oppakt.
+      docs.forEach((f,i)=>form.append("data"+i,f,f.name));
       res=await fetch(url,{method:"POST",body:form,signal:controller.signal});
     }else{
       res=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},
