@@ -58,7 +58,9 @@
   .connect-btn-connected{background:#2EAA6F;color:#fff}
 
   /* Main chat */
-  .main-chat{flex:1;display:flex;flex-direction:column;background:#fff;overflow:hidden}
+  .main-chat{flex:1;display:flex;flex-direction:column;background:#fff;overflow:hidden;position:relative}
+  .jump-btn{position:absolute;right:24px;bottom:86px;display:none;align-items:center;gap:6px;background:#1D1E25;color:#fff;border:none;border-radius:20px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.25);z-index:5;font-family:inherit}
+  .jump-btn:hover{filter:brightness(1.2)}
   .chat-header{padding:10px 20px;border-bottom:1px solid #E8E8E8;display:flex;align-items:center;justify-content:space-between}
   .chat-title{font-weight:700;font-size:16px;color:#1D1E25}
   .chat-subtitle{font-size:12px;color:#8B8FA3;margin-top:2px}
@@ -187,6 +189,7 @@
         <div class="welcome-text">Vul links je n8n webhook URL in en klik <strong>Verbinden</strong>.<br>Hover over een teamlid om een profielfoto toe te voegen.</div>
       </div>
     </div>
+    <button class="jump-btn" id="jump-btn" onclick="jumpToLatest()">↓ Nieuwste berichten</button>
     <div class="input-area">
       <div class="input-row">
         <button class="attach-btn" id="attach-btn" onclick="document.getElementById('doc-upload').click()" disabled title="Document toevoegen (pdf, docx, xlsx)">📎</button>
@@ -229,6 +232,8 @@ let connected=false,sessionId=null,sending=false,avatarPhotos={},uploadingFor=nu
   buildTeamList();buildHeaderAvatars();
   const ta=document.getElementById("chat-input");
   ta.addEventListener("input",()=>{ta.style.height="auto";ta.style.height=Math.min(ta.scrollHeight,120)+"px"});
+  const MA=document.getElementById("messages-area");
+  MA.addEventListener("scroll",()=>{ stickBottom=(MA.scrollHeight-MA.scrollTop-MA.clientHeight)<120; updateJumpBtn(); });
   // URL priority: ?url= parameter > localStorage
   const params=new URLSearchParams(window.location.search);
   const paramUrl=params.get("url");
@@ -360,7 +365,7 @@ async function sendMessage(){
     }
     clearTimeout(timeout);
     // Stoppen met pollen en de laatste tussenstappen ophalen vóór de eindsynthese.
-    stopPolling();await pollOnce();
+    stopPolling();await pollOnce();await awaitDrain();
     removeTyping();
     if(!res.ok)throw new Error(`HTTP ${res.status}: ${res.statusText}`);
     const ct=res.headers.get("content-type")||"";
@@ -400,41 +405,66 @@ async function fetchFeed(mainUrl){
   }catch(e){return[]}
 }
 
-function renderFeed(entries){
+// Nieuwe rijen komen via polling binnen en gaan in een wachtrij. Een aparte "drainer"
+// toont ze ÉÉN VOOR ÉÉN met een korte typ-pauze ertussen, zodat je de tussenstappen als
+// losse stappen ziet — ook als een poll meerdere rijen tegelijk teruggeeft.
+let feedQueue=[], draining=false;
+
+function enqueueFeed(entries){
   const fresh=entries.filter(e=>typeof e.id==="number"&&e.id>renderedId).sort((a,b)=>a.id-b.id);
-  if(!fresh.length)return;
-  removeTyping();
-  for(const e of fresh){
-    const agentKey=resolveAgent(e.agent)||"jacky";
-    const toKey=resolveAgent(e.to);
-    const t=e.text||"";
-    if(!t.trim()){renderedId=e.id;continue}
-    if(toKey){
-      if(pollPrevAgent&&pollPrevAgent!==agentKey)addHandoff(pollPrevAgent,agentKey);
-      addDirectedMsg(agentKey,toKey,t);
-    }else if(agentKey==="jacky"){
-      addMsg("jacky",t);
-    }else{
-      if(pollPrevAgent&&pollPrevAgent!==agentKey)addHandoff(pollPrevAgent,agentKey);
-      addAgentReply(agentKey,t);
-    }
-    renderedId=e.id;pollPrevAgent=agentKey;
-  }
+  for(const e of fresh){ renderedId=e.id; if((e.text||"").trim()) feedQueue.push(e); }
+  drainQueue();
 }
 
-async function pollOnce(){
-  const entries=await fetchFeed(pollMainUrl);
-  renderFeed(entries);
+function renderEntry(e){
+  const agentKey=resolveAgent(e.agent)||"jacky";
+  const toKey=resolveAgent(e.to);
+  const t=e.text||"";
+  if(toKey){
+    if(pollPrevAgent&&pollPrevAgent!==agentKey)addHandoff(pollPrevAgent,agentKey);
+    addDirectedMsg(agentKey,toKey,t);
+  }else if(agentKey==="jacky"){
+    addMsg("jacky",t);
+  }else{
+    if(pollPrevAgent&&pollPrevAgent!==agentKey)addHandoff(pollPrevAgent,agentKey);
+    addAgentReply(agentKey,t);
+  }
+  pollPrevAgent=agentKey;
+}
+
+async function drainQueue(){
+  if(draining)return;
+  draining=true;
+  while(feedQueue.length){
+    const e=feedQueue.shift();
+    removeTyping();
+    renderEntry(e);
+    if(feedQueue.length||pollActive){
+      const next=feedQueue[0];
+      showTyping(next?(resolveAgent(next.agent)||"jacky"):"jacky");
+      await wait(Math.min(450+(e.text||"").length*3,1800));
+    }
+  }
+  draining=false;
   if(pollActive)showTyping("jacky"); // team is nog aan het werk
 }
 
+// wacht tot de wachtrij volledig is afgespeeld (gebruikt vóór de eindsynthese)
+async function awaitDrain(){ while(draining||feedQueue.length) await wait(150); }
+
+async function pollOnce(){
+  const entries=await fetchFeed(pollMainUrl);
+  enqueueFeed(entries);
+  if(pollActive&&!draining&&!feedQueue.length)showTyping("jacky");
+}
+
 async function startPolling(mainUrl){
-  pollMainUrl=mainUrl;pollPrevAgent=null;
+  pollMainUrl=mainUrl;pollPrevAgent=null;feedQueue=[];
   // Baseline: rijen van eerdere beurten van deze sessie niet opnieuw tonen.
   const base=await fetchFeed(mainUrl);
   renderedId=base.reduce((m,e)=>Math.max(m,(typeof e.id==="number"?e.id:0)),0);
   pollActive=true;
-  pollTimer=setInterval(pollOnce,2500);
+  pollTimer=setInterval(pollOnce,2000);
 }
 
 function stopPolling(){
@@ -594,7 +624,10 @@ function displayTextFallback(text){
 function timeNow(){return new Date().toLocaleTimeString("nl-NL",{hour:"2-digit",minute:"2-digit"})}
 function esc(t){const d=document.createElement("div");d.textContent=t;return d.innerHTML}
 function escRe(s){return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}
-function scroll(){const m=document.getElementById("messages-area");requestAnimationFrame(()=>{m.scrollTop=m.scrollHeight})}
+let stickBottom=true;
+function scroll(){ if(stickBottom){const m=document.getElementById("messages-area");requestAnimationFrame(()=>{m.scrollTop=m.scrollHeight});} updateJumpBtn(); }
+function updateJumpBtn(){ const b=document.getElementById("jump-btn"); if(b) b.style.display=stickBottom?"none":"flex"; }
+function jumpToLatest(){ stickBottom=true; const m=document.getElementById("messages-area"); m.scrollTop=m.scrollHeight; updateJumpBtn(); }
 
 function fmt(t){
   let h=t;
