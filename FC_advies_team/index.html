@@ -217,7 +217,7 @@
     <button class="jump-btn" id="jump-btn" onclick="jumpToLatest()">↓ Nieuwste berichten</button>
     <div class="input-area">
       <div class="input-row">
-        <button class="attach-btn" id="attach-btn" onclick="document.getElementById('doc-upload').click()" disabled title="Documenten toevoegen — meerdere mogelijk" aria-label="Documenten toevoegen">📎</button>
+        <button class="attach-btn" id="attach-btn" onclick="document.getElementById('doc-upload').click()" disabled title="Documenten toevoegen — meerdere mogelijk" aria-label="Documenten toevoegen"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.44 11.05l-8.49 8.49a5 5 0 0 1-7.07-7.07l8.49-8.49a3.5 3.5 0 0 1 4.95 4.95l-8.49 8.49a2 2 0 0 1-2.83-2.83l7.78-7.78"/></svg></button>
         <div class="input-field">
           <div class="file-chips" id="file-chips"></div>
           <textarea class="chat-input" id="chat-input" placeholder="Verbind eerst met n8n…" rows="1" disabled onkeydown="handleKey(event)"></textarea>
@@ -236,15 +236,15 @@
 // blijven matchen ongeacht hoe de n8n-flow de agent-naam precies schrijft
 // (bv. "Compliance officer" -> "complianceofficer").
 const AGENTS={
-  jacky:                    {name:"Jacky",              role:"Regisseur",                  color:"#C9A063",initials:"JK",gradient:"linear-gradient(135deg,#C9A063,#E8C97A)",icon:"🧭",photo:"Avatars/jacky.png"},
-  fiscalist:                {name:"Willem de Boer",     role:"Fiscalist",                  color:"#2E7D5B",initials:"WB",gradient:"linear-gradient(135deg,#2E7D5B,#4FA37D)",icon:"🧾",photo:"Avatars/fiscalist.png"},
-  accountant:                {name:"Nora Jansen",        role:"Accountant",                  color:"#2E6FAA",initials:"NJ",gradient:"linear-gradient(135deg,#2E6FAA,#5B93CC)",icon:"📊",photo:"Avatars/accountant.png"},
-  jurist:                    {name:"Ali Mhmid",          role:"Jurist",                      color:"#3A3A5C",initials:"AM",gradient:"linear-gradient(135deg,#3A3A5C,#5A5A7C)",icon:"⚖️",photo:"Avatars/jurist.png"},
-  complianceofficer:         {name:"Yasmin El Idrissi",  role:"Compliance officer",          color:"#B3552C",initials:"YE",gradient:"linear-gradient(135deg,#B3552C,#D9834F)",icon:"🛡️",photo:"Avatars/complianceofficer.png"},
-  notaris:                   {name:"Pieter van Rijn",    role:"Notaris",                     color:"#6B4A8A",initials:"PR",gradient:"linear-gradient(135deg,#6B4A8A,#8F6FB0)",icon:"📜",photo:"Avatars/notaris.png"},
-  familygovernanceadviseur:  {name:"Elena Voss",         role:"Family governance adviseur",  color:"#C2517A",initials:"EV",gradient:"linear-gradient(135deg,#C2517A,#DD7FA0)",icon:"👪",photo:"Avatars/familygovernanceadviseur.png"},
-  dataverzamelaar:            {name:"Daan de Groot",      role:"Data verzamelaar",            color:"#2EAA6F",initials:"DG",gradient:"linear-gradient(135deg,#2EAA6F,#4DC98A)",icon:"🔎",photo:"Avatars/dataverzamelaar.png"},
-  rapportschrijver:           {name:"Lisa van Dijk",      role:"Rapportschrijver",            color:"#B35CC9",initials:"LD",gradient:"linear-gradient(135deg,#B35CC9,#D07CE0)",icon:"📝",photo:"Avatars/rapportschrijver.png"},
+  jacky:                    {name:"Jacky",              role:"Regisseur",                  color:"#B5823F",initials:"JK",gradient:"linear-gradient(140deg,#E4BD7C,#B5823F)",icon:"🧭",photo:"Avatars/jacky.png"},
+  fiscalist:                {name:"Willem de Boer",     role:"Fiscalist",                  color:"#5E7A46",initials:"WB",gradient:"linear-gradient(140deg,#8AA05E,#5E7A46)",icon:"🧾",photo:"Avatars/fiscalist.png"},
+  accountant:                {name:"Nora Jansen",        role:"Accountant",                  color:"#2F6E6A",initials:"NJ",gradient:"linear-gradient(140deg,#4E9C97,#2F6E6A)",icon:"📊",photo:"Avatars/accountant.png"},
+  jurist:                    {name:"Ali Mhmid",          role:"Jurist",                      color:"#7A6248",initials:"AM",gradient:"linear-gradient(140deg,#A98A66,#7A6248)",icon:"⚖️",photo:"Avatars/jurist.png"},
+  complianceofficer:         {name:"Yasmin El Idrissi",  role:"Compliance officer",          color:"#B0613A",initials:"YE",gradient:"linear-gradient(140deg,#D08A5E,#B0613A)",icon:"🛡️",photo:"Avatars/complianceofficer.png"},
+  notaris:                   {name:"Pieter van Rijn",    role:"Notaris",                     color:"#7A5070",initials:"PR",gradient:"linear-gradient(140deg,#A6789C,#7A5070)",icon:"📜",photo:"Avatars/notaris.png"},
+  familygovernanceadviseur:  {name:"Elena Voss",         role:"Family governance adviseur",  color:"#A85D6B",initials:"EV",gradient:"linear-gradient(140deg,#C98795,#A85D6B)",icon:"👪",photo:"Avatars/familygovernanceadviseur.png"},
+  dataverzamelaar:            {name:"Daan de Groot",      role:"Data verzamelaar",            color:"#3F8A6E",initials:"DG",gradient:"linear-gradient(140deg,#5FB58F,#3F8A6E)",icon:"🔎",photo:"Avatars/dataverzamelaar.png"},
+  rapportschrijver:           {name:"Lisa van Dijk",      role:"Rapportschrijver",            color:"#6E5A8A",initials:"LD",gradient:"linear-gradient(140deg,#9A86B8,#6E5A8A)",icon:"📝",photo:"Avatars/rapportschrijver.png"},
 };
 const AK=Object.keys(AGENTS);
 function normKey(s){return String(s||"").toLowerCase().replace(/[^a-z0-9]/g,"")}
