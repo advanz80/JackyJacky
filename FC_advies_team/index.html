@@ -310,6 +310,7 @@ function renderChips(){
   c.innerHTML=pendingDocs.map((f,i)=>`<span class="file-chip"><span>${esc(f.name)}</span><button onclick="removeDoc(${i})" title="Verwijderen">✕</button></span>`).join("");
 }
 function removeDoc(i){ pendingDocs.splice(i,1); document.getElementById("doc-upload").value=""; renderChips(); }
+function fileToB64(f){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(String(r.result).split(",")[1]||""); r.onerror=()=>rej(new Error("kon bestand niet lezen")); r.readAsDataURL(f); }); }
 function clearFile(){
   pendingDocs=[];
   document.getElementById("doc-upload").value="";
@@ -358,19 +359,11 @@ async function sendMessage(){
     const controller=new AbortController();
     const timeout=setTimeout(()=>controller.abort(),480000);
     let res;
-    if(docs.length){
-      const form=new FormData();
-      form.append("action","sendMessage");
-      form.append("chatInput",text);
-      form.append("sessionId",sessionId);
-      // Elk bestand als eigen binair veld (data0, data1, ...) zodat n8n er losse
-      // binaries van maakt die 'Bestanden uitsplitsen' allemaal oppakt.
-      docs.forEach((f,i)=>form.append("data"+i,f,f.name));
-      res=await fetch(url,{method:"POST",body:form,signal:controller.signal});
-    }else{
-      res=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({action:"sendMessage",chatInput:text,sessionId}),signal:controller.signal});
-    }
+    // Documenten gaan als base64 mee in de JSON-body (betrouwbaarder dan multipart bij meerdere bestanden).
+    const documenten=[];
+    for(const f of docs){ documenten.push({ naam:f.name, mime:f.type||"", data:await fileToB64(f) }); }
+    res=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({action:"sendMessage",chatInput:text,sessionId,documenten}),signal:controller.signal});
     clearTimeout(timeout);
     // Stoppen met pollen en de laatste tussenstappen ophalen vóór de eindsynthese.
     stopPolling();await pollOnce();await awaitDrain();
