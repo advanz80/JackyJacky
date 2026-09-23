@@ -13,8 +13,8 @@
     --ink:#23201B; --ink-2:#4A443B; --ink-soft:#857C6E;
     --paper:#FBFAF7; --surface:#FFFFFF; --sand:#F4F0E8;
     --line:#EBE5DA; --line-2:#E0D8CB;
-    --dark:#211E1A; --dark-2:#2B2721; --dark-line:rgba(255,255,255,.08);
-    --dark-txt:#EFE9DE; --dark-mut:#9E9587;
+    --dark:#F1ECE1; --dark-2:#FFFFFF; --dark-line:#E2DACD;
+    --dark-txt:#23201B; --dark-mut:#7E7567;
     --ok:#3E8E6E; --ok-soft:#E7F1EC;
     --shadow:0 1px 2px rgba(35,32,27,.06), 0 8px 24px -12px rgba(35,32,27,.14);
     --radius:14px;
@@ -37,11 +37,11 @@
   .app{display:flex;width:100%;height:100vh;height:100dvh}
 
   /* ══ Sidebar (premium warm-dark) ══ */
-  .sidebar{width:300px;min-width:300px;background:var(--dark);color:var(--dark-txt);display:flex;flex-direction:column;overflow-y:auto}
+  .sidebar{width:300px;min-width:300px;background:var(--dark);color:var(--dark-txt);display:flex;flex-direction:column;overflow-y:auto;border-right:1px solid var(--line-2)}
   .brand{display:flex;align-items:center;gap:13px;padding:22px 22px 18px}
   .brand-mark{width:42px;height:42px;border-radius:12px;background:linear-gradient(145deg,#E2B978,var(--gold-deep));display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:600;font-size:22px;color:#2A2013;box-shadow:0 2px 10px rgba(211,159,91,.35)}
   .brand-name{font-family:'Fraunces',serif;font-weight:600;font-size:19px;letter-spacing:.1px;line-height:1.1}
-  .brand-sub{font-size:12.5px;color:var(--gold);font-weight:600;letter-spacing:.3px;margin-top:2px}
+  .brand-sub{font-size:12.5px;color:var(--gold-deep);font-weight:600;letter-spacing:.3px;margin-top:2px}
 
   .roster{padding:6px 12px 12px}
   .section-label{font-size:12px;font-weight:600;color:var(--dark-mut);padding:14px 10px 8px}
@@ -53,13 +53,13 @@
   .avatar-upload-btn{position:absolute;bottom:-3px;right:-3px;width:18px;height:18px;border-radius:50%;background:var(--gold);border:2px solid var(--dark);display:none;align-items:center;justify-content:center;font-size:9px;cursor:pointer;line-height:1}
   .team-member:hover .avatar-upload-btn{display:flex}
   .status-dot{width:11px;height:11px;border-radius:50%;position:absolute;bottom:-1px;right:-1px;border:2.5px solid var(--dark)}
-  .status-online{background:#5BBF8A}.status-away{background:var(--gold)}.status-offline{background:#5A554D}
+  .status-online{background:#5BBF8A}.status-away{background:var(--gold)}.status-offline{background:#C4BAA9}
   .member-info{flex:1;min-width:0}
   .member-name{font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--dark-txt)}
   .member-role{font-size:11.5px;color:var(--dark-mut);margin-top:1px}
 
-  .config-panel{margin-top:auto;padding:16px 18px 20px;border-top:1px solid var(--dark-line);background:rgba(0,0,0,.12)}
-  .config-label{font-size:12px;color:var(--gold);font-weight:600;letter-spacing:.2px;margin-bottom:4px}
+  .config-panel{margin-top:auto;padding:16px 18px 20px;border-top:1px solid var(--dark-line);background:rgba(35,32,27,.035)}
+  .config-label{font-size:12px;color:var(--gold-deep);font-weight:600;letter-spacing:.2px;margin-bottom:4px}
   .config-hint{font-size:11.5px;color:var(--dark-mut);line-height:1.45;margin-bottom:10px}
   .config-row{display:flex;gap:7px;margin-bottom:10px}
   .config-input{flex:1;min-width:0;padding:9px 11px;border-radius:9px;border:1px solid var(--dark-line);background:var(--dark-2);color:var(--dark-txt);font-size:12px;font-family:inherit;outline:none;transition:border-color .15s}
@@ -72,7 +72,7 @@
   .connect-btn:active{transform:translateY(1px)}
   .connect-btn-ready{background:linear-gradient(140deg,#E4BD7C,var(--gold-deep));color:#2A2013}
   .connect-btn-ready:hover{filter:brightness(1.05)}
-  .connect-btn-connected{background:#26433A;color:#8FE0BB;box-shadow:inset 0 0 0 1px rgba(143,224,187,.25)}
+  .connect-btn-connected{background:#E7F1EC;color:#2E6E54;box-shadow:inset 0 0 0 1px rgba(62,142,110,.28)}
 
   /* ══ Main chat ══ */
   .main-chat{flex:1;display:flex;flex-direction:column;background:var(--paper);overflow:hidden;position:relative;min-width:0}
@@ -123,21 +123,22 @@
   /* Input */
   .input-area{padding:14px max(20px,calc((100% - 900px)/2)) 20px;border-top:1px solid var(--line);background:var(--paper)}
   .input-row{display:flex;gap:10px;align-items:flex-end}
-  .attach-btn{width:46px;height:46px;flex-shrink:0;border:1px solid var(--line-2);border-radius:13px;background:var(--surface);color:var(--ink-soft);font-size:18px;cursor:pointer;line-height:1;transition:all .15s;display:flex;align-items:center;justify-content:center}
-  .attach-btn:hover{background:var(--sand);color:var(--ink)}
-  .attach-btn:disabled{opacity:.5;cursor:not-allowed}
-  .input-field{flex:1;min-width:0;background:var(--surface);border:1px solid var(--line-2);border-radius:16px;padding:6px 8px 6px 14px;transition:border-color .15s,box-shadow .15s}
+  .input-field{flex:1;min-width:0;display:flex;align-items:flex-end;gap:2px;background:var(--surface);border:1px solid var(--line-2);border-radius:16px;padding:6px;transition:border-color .15s,box-shadow .15s}
   .input-field:focus-within{border-color:var(--gold);box-shadow:0 0 0 4px rgba(211,159,91,.14)}
-  .file-chips{display:flex;flex-wrap:wrap;gap:6px;padding:5px 2px 3px;max-height:84px;overflow-y:auto}
+  .attach-btn{width:38px;height:38px;flex-shrink:0;border:none;border-radius:11px;background:transparent;color:var(--ink-soft);cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center}
+  .attach-btn:hover:not(:disabled){background:var(--sand);color:var(--ink)}
+  .attach-btn:disabled{opacity:.45;cursor:not-allowed}
+  .field-main{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center}
+  .file-chips{display:flex;flex-wrap:wrap;gap:6px;padding:4px 4px 6px;max-height:84px;overflow-y:auto}
   .file-chips:empty{display:none}
   .file-chip{display:inline-flex;align-items:center;gap:7px;background:var(--gold-soft);border:1px solid #EAD9BE;border-radius:9px;padding:4px 6px 4px 10px;font-size:12px;color:var(--gold-deep);max-width:200px;font-weight:500}
   .file-chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .file-chip button{border:none;background:rgba(181,130,63,.14);color:var(--gold-deep);cursor:pointer;font-size:11px;line-height:1;width:17px;height:17px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
   .file-chip button:hover{background:rgba(181,130,63,.28)}
-  .chat-input{width:100%;padding:9px 4px;border:none;font-size:15px;font-family:inherit;background:transparent;outline:none;resize:none;min-height:30px;max-height:150px;line-height:1.5;color:var(--ink)}
+  .chat-input{width:100%;padding:8px 6px;border:none;font-size:15px;font-family:inherit;background:transparent;outline:none;resize:none;min-height:24px;max-height:150px;line-height:1.5;color:var(--ink)}
   .chat-input::placeholder{color:var(--ink-soft)}
   .chat-input:disabled{cursor:not-allowed}
-  .send-btn{height:46px;padding:0 22px;flex-shrink:0;border:none;border-radius:14px;background:linear-gradient(140deg,#E4BD7C,var(--gold-deep));color:#2A2013;font-weight:700;font-size:14.5px;cursor:pointer;font-family:inherit;white-space:nowrap;transition:filter .15s,transform .05s;letter-spacing:.2px}
+  .send-btn{height:52px;padding:0 22px;flex-shrink:0;border:none;border-radius:14px;background:linear-gradient(140deg,#E4BD7C,var(--gold-deep));color:#2A2013;font-weight:700;font-size:14.5px;cursor:pointer;font-family:inherit;white-space:nowrap;transition:filter .15s,transform .05s;letter-spacing:.2px}
   .send-btn:hover:not(:disabled){filter:brightness(1.05)}
   .send-btn:active:not(:disabled){transform:translateY(1px)}
   .send-btn:disabled{background:var(--sand);color:var(--ink-soft);cursor:not-allowed}
@@ -217,10 +218,12 @@
     <button class="jump-btn" id="jump-btn" onclick="jumpToLatest()">↓ Nieuwste berichten</button>
     <div class="input-area">
       <div class="input-row">
-        <button class="attach-btn" id="attach-btn" onclick="document.getElementById('doc-upload').click()" disabled title="Documenten toevoegen — meerdere mogelijk" aria-label="Documenten toevoegen"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.44 11.05l-8.49 8.49a5 5 0 0 1-7.07-7.07l8.49-8.49a3.5 3.5 0 0 1 4.95 4.95l-8.49 8.49a2 2 0 0 1-2.83-2.83l7.78-7.78"/></svg></button>
         <div class="input-field">
-          <div class="file-chips" id="file-chips"></div>
-          <textarea class="chat-input" id="chat-input" placeholder="Verbind eerst met n8n…" rows="1" disabled onkeydown="handleKey(event)"></textarea>
+          <button class="attach-btn" id="attach-btn" onclick="document.getElementById('doc-upload').click()" disabled title="Documenten toevoegen — meerdere mogelijk" aria-label="Documenten toevoegen"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.44 11.05l-8.49 8.49a5 5 0 0 1-7.07-7.07l8.49-8.49a3.5 3.5 0 0 1 4.95 4.95l-8.49 8.49a2 2 0 0 1-2.83-2.83l7.78-7.78"/></svg></button>
+          <div class="field-main">
+            <div class="file-chips" id="file-chips"></div>
+            <textarea class="chat-input" id="chat-input" placeholder="Verbind eerst met n8n…" rows="1" disabled onkeydown="handleKey(event)"></textarea>
+          </div>
         </div>
         <button class="send-btn" id="send-btn" onclick="sendMessage()" disabled>Verstuur</button>
       </div>
