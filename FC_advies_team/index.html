@@ -441,6 +441,19 @@ async function fetchFeed(mainUrl){
 // toont ze ÉÉN VOOR ÉÉN met een korte typ-pauze ertussen, zodat je de tussenstappen als
 // losse stappen ziet — ook als een poll meerdere rijen tegelijk teruggeeft.
 let feedQueue=[], draining=false;
+// Wie hebben we een vraag gestuurd maar nog geen antwoord van? Die "typt".
+const pendingAgents=[];
+function typingTarget(){ return pendingAgents.length ? pendingAgents[0] : "jacky"; }
+// Pauze tussen berichten: ruim bij een specialist-antwoord, kort bij een vraag.
+// Bij een achterstand wordt de pauze automatisch korter, zodat je niet lang nakijkt.
+const DELAY_ANSWER=5000, DELAY_QUESTION=1400;
+function gapFor(entry){
+  const isAnswer=!entry.to && (resolveAgent(entry.agent)||"jacky")!=="jacky";
+  let ms=isAnswer?DELAY_ANSWER:DELAY_QUESTION;
+  if(feedQueue.length>=3) ms=Math.min(ms,1800);
+  else if(feedQueue.length===2) ms=Math.min(ms,3000);
+  return ms;
+}
 
 function enqueueFeed(entries){
   const fresh=entries.filter(e=>typeof e.id==="number"&&e.id>renderedId).sort((a,b)=>a.id-b.id);
@@ -455,11 +468,13 @@ function renderEntry(e){
   if(toKey){
     if(pollPrevAgent&&pollPrevAgent!==agentKey)addHandoff(pollPrevAgent,agentKey);
     addDirectedMsg(agentKey,toKey,t);
+    if(pendingAgents.indexOf(toKey)===-1)pendingAgents.push(toKey); // deze specialist is nu aan zet
   }else if(agentKey==="jacky"){
     addMsg("jacky",t);
   }else{
     if(pollPrevAgent&&pollPrevAgent!==agentKey)addHandoff(pollPrevAgent,agentKey);
     addAgentReply(agentKey,t);
+    const ix=pendingAgents.indexOf(agentKey); if(ix>-1)pendingAgents.splice(ix,1); // antwoord binnen
   }
   pollPrevAgent=agentKey;
 }
@@ -473,12 +488,15 @@ async function drainQueue(){
     renderEntry(e);
     if(feedQueue.length||pollActive){
       const next=feedQueue[0];
-      showTyping(next?(resolveAgent(next.agent)||"jacky"):"jacky");
-      await wait(Math.min(450+(e.text||"").length*3,1800));
+      // Toon wie er nu werkt: de specialist met een openstaande vraag, anders de afzender
+      // van het volgende bericht, anders de regisseur.
+      showTyping(typingTarget()!=="jacky" ? typingTarget()
+                 : (next?(resolveAgent(next.agent)||"jacky"):"jacky"));
+      await wait(gapFor(e));
     }
   }
   draining=false;
-  if(pollActive)showTyping("jacky"); // team is nog aan het werk
+  if(pollActive)showTyping(typingTarget()); // team is nog aan het werk
 }
 
 // wacht tot de wachtrij volledig is afgespeeld (gebruikt vóór de eindsynthese)
@@ -487,11 +505,11 @@ async function awaitDrain(){ while(draining||feedQueue.length) await wait(150); 
 async function pollOnce(){
   const entries=await fetchFeed(pollMainUrl);
   enqueueFeed(entries);
-  if(pollActive&&!draining&&!feedQueue.length)showTyping("jacky");
+  if(pollActive&&!draining&&!feedQueue.length)showTyping(typingTarget());
 }
 
 async function startPolling(mainUrl){
-  pollMainUrl=mainUrl;pollPrevAgent=null;feedQueue=[];
+  pollMainUrl=mainUrl;pollPrevAgent=null;feedQueue=[];pendingAgents.length=0;
   // Baseline: rijen van eerdere beurten van deze sessie niet opnieuw tonen.
   const base=await fetchFeed(mainUrl);
   renderedId=base.reduce((m,e)=>Math.max(m,(typeof e.id==="number"?e.id:0)),0);
