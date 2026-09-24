@@ -111,6 +111,8 @@
   .msg-bubble-user a{color:#2C2114;text-decoration:underline}
   .msg-bubble-directed{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-left:3px solid;box-shadow:var(--shadow);border-radius:5px 16px 16px 16px}
   .msg-bubble strong{font-weight:700}
+  .dl-link{display:inline-flex;align-items:center;gap:7px;margin-top:4px;background:var(--gold-soft);border:1px solid #EAD9BE;color:var(--gold-deep);text-decoration:none;font-weight:600;font-size:13.5px;padding:8px 14px;border-radius:11px;transition:all .15s}
+  .dl-link:hover{background:#F0E2CB;border-color:var(--gold)}
 
   .card{margin-top:7px;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:var(--surface);box-shadow:var(--shadow);max-width:640px}
   .card-header{padding:9px 15px;color:#fff;font-weight:700;font-size:13px;display:flex;align-items:center;gap:7px;letter-spacing:.2px}
@@ -662,6 +664,7 @@ function jumpToLatest(){ stickBottom=true; const m=document.getElementById("mess
 function fmt(t){
   let h=t;
   h=h.replace(/\*\*([^*]+)\*\*/g,"<strong>$1</strong>");
+  h=h.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,'<a href="$2" target="_blank" rel="noopener" class="dl-link">$1</a>');
   h=h.replace(/^(#{1,3})\s+(.+)$/gm,(_,hh,tt)=>`<strong style="font-size:${hh.length===1?15:14}px;display:block;margin:6px 0 2px">${tt}</strong>`);
   h=h.replace(/^(📚|📊|💼|⚖️|✍️|🔬|📄|🎯|⚠️|✅|❌|📌|🔑|🧾|🛡️|📜|👪|🔎|📝|🧭)\s*(.+)$/gm,'<div style="margin:4px 0"><span style="margin-right:4px">$1</span><strong>$2</strong></div>');
   return h;
